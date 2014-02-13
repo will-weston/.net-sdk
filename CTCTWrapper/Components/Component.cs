@@ -22,19 +22,19 @@ namespace CTCT.Components
         /// <param name="json">The serialization string.</param>
         /// <returns>Returns the object deserialized from the JSON string.</returns>
         public static T FromJSON<T>(string json)
-            where T : class
         {
-            T obj = null;
-            using (MemoryStream ms = new MemoryStream())
+            byte[] buffer = Encoding.UTF8.GetBytes(json);
+            using (MemoryStream ms = new MemoryStream(buffer))
             {
-                byte[] buffer = Encoding.UTF8.GetBytes(json);
-                ms.Write(buffer, 0, buffer.Length);
-                ms.Position = 0;
                 DataContractJsonSerializer ser = new DataContractJsonSerializer(typeof(T));
-                obj = ser.ReadObject(ms) as T;
+                return (T)ser.ReadObject(ms);
             }
+        }
 
-            return obj;
+        public static object FromJSON(Stream json, Type type)
+        {
+            DataContractJsonSerializer serializer = new DataContractJsonSerializer(type);
+            return serializer.ReadObject(json);
         }
 
         /// <summary>
@@ -43,15 +43,12 @@ namespace CTCT.Components
         /// <returns>Returns a string representing the serialized object.</returns>
         public virtual string ToJSON()
         {
-            string json = null;
             using (MemoryStream ms = new MemoryStream())
             {
                 DataContractJsonSerializer ser = new DataContractJsonSerializer(this.GetType());
                 ser.WriteObject(ms, this);
-                json = Encoding.UTF8.GetString(ms.ToArray());
+                return Encoding.UTF8.GetString(ms.ToArray());
             }
-
-            return json;
         }
     }
 }

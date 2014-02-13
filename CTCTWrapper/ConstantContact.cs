@@ -14,6 +14,7 @@ using System.Configuration;
 using System.IO;
 using System.Text;
 using CTCT.Components.MyLibrary;
+using CTCT.Components.Account;
 
 #endregion
 
@@ -1455,6 +1456,15 @@ namespace CTCT
         public IList<VerifiedEmailAddress> GetVerifiedEmailAddress()
         {
             return AccountService.GetVerifiedEmailAddress(AccessToken, APIKey);
+        }
+
+        /// <summary>
+        /// Retrieve the summary account-related information listed in the Structure section for the authorized Constant Contact account. 
+        /// </summary>
+        /// <returns>Summary account-related information listed in the Structure section for the authorized Constant Contact account.</returns>
+        public AccountInformation GetAccountInformation()
+        {
+            return AccountService.GetInformation(AccessToken, APIKey);
         }
 
         #endregion Account service

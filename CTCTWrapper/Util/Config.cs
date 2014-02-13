@@ -174,6 +174,10 @@ namespace CTCT.Util
             /// Account verified email addresses link
             /// </summary>
             public const string AccountVerifiedEmailAddressess = "account/verifiedemailaddresses";
+            /// <summary>
+            /// Account verified email addresses link
+            /// </summary>
+            public const string AccountInfo = "account/info";
 			/// <summary>
 			/// MyLibrary information
 			/// </summary>

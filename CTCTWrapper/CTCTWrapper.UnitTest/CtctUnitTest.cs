@@ -1655,16 +1655,5 @@ namespace CTCTWrapper.UnitTest
 		#endregion
 
         #endregion
-
-        #region Authentication
-
-        [TestMethod]
-        public void LiveAuthenticationTest()
-        {
-            string state = "ok";
-            var accessToken = OAuth.AuthenticateFromWinProgram(ref state);            
-        }
-
-        #endregion
     }
 }

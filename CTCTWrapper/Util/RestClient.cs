@@ -6,6 +6,7 @@ using System.Net;
 using System.Collections.Specialized;
 using System.IO;
 using System.Configuration;
+using CTCT.Exceptions;
 
 namespace CTCT.Util
 {
@@ -96,8 +97,6 @@ namespace CTCT.Util
         private CUrlResponse HttpRequest(string url, string method, string accessToken, string apiKey, byte[] data, bool? isMultipart)
         {
             // Initialize the response
-            HttpWebResponse response = null;
-            string responseText = null;
             CUrlResponse urlResponse = new CUrlResponse();
 
             var address = url;
@@ -127,59 +126,53 @@ namespace CTCT.Util
             if (data != null)
             {
                 using (var stream = request.GetRequestStream())
-                {
                     stream.Write(data, 0, data.Length);
-                }
             }
 
             // Now try to send the request
             try
             {
-                response = request.GetResponse() as HttpWebResponse;
-                // Expect the unexpected
-                if (request.HaveResponse == true && response == null)
+                using (var response = request.GetResponse())
                 {
-                    throw new WebException("Response was not returned or is null");
-                }
-				foreach(string header in response.Headers.AllKeys)
-				{
-					urlResponse.Headers.Add(header, response.GetResponseHeader(header));
-				}
+                    var httpReponse = response as HttpWebResponse;
+                    // Expect the unexpected
+                    if (request.HaveResponse == true && httpReponse == null)
+                        throw new WebException("Response was not returned or is null");
 
-                urlResponse.StatusCode = response.StatusCode;
-                if (response.StatusCode != HttpStatusCode.OK)
-                {
-                    throw new WebException("Response with status: " + response.StatusCode + " " + response.StatusDescription);
+                    foreach (string header in httpReponse.Headers.AllKeys)
+                    {
+                        urlResponse.Headers.Add(header, httpReponse.GetResponseHeader(header));
+                    }
+
+                    urlResponse.StatusCode = httpReponse.StatusCode;
+                    if (httpReponse.StatusCode != HttpStatusCode.OK)
+                    {
+                        urlResponse.IsError = true;
+                        using (var stream = response.GetResponseStream())
+                            urlResponse.Info = (IList<CUrlRequestError>)CUrlRequestError.FromJSON(stream, typeof(IList<CUrlRequestError>));
+                    }
+                    else
+                    {
+                        using (StreamReader reader = new StreamReader(response.GetResponseStream(), Encoding.UTF8))
+                            urlResponse.Body = reader.ReadToEnd();
+                    }
                 }
             }
             catch (WebException e)
             {
-                if (e.Response != null)
+                urlResponse.IsError = true;
+                if (e.Response != null && e.Response is HttpWebResponse)
                 {
-                    response = (HttpWebResponse)e.Response;
-                    urlResponse.IsError = true;
+                    var response = (HttpWebResponse)e.Response;
+                    urlResponse.StatusCode = response.StatusCode;
+                    using (var stream = response.GetResponseStream())
+                        urlResponse.Info = (IList<CUrlRequestError>)CUrlRequestError.FromJSON(stream, typeof(IList<CUrlRequestError>));
                 }
             }
-            finally
-            {
-                if (response != null)
-                {
-                    // Get the response content
-                    using (StreamReader reader = new StreamReader(response.GetResponseStream(), Encoding.UTF8))
-                    {
-                        responseText = reader.ReadToEnd();
-                    }
-                    response.Close();
-                    if (urlResponse.IsError && responseText.Contains("error_message"))
-                    {
-                        urlResponse.Info = CUrlRequestError.FromJSON<IList<CUrlRequestError>>(responseText);
-                    }
-                    else
-                    {
-                        urlResponse.Body = responseText;
-                    }
-                }
-            }
+
+            //This is dumb.
+            if (urlResponse.IsError)
+                throw new CtctException(urlResponse.GetErrorMessage(), urlResponse.Info.ToArray(), urlResponse.StatusCode);
 
             return urlResponse;
         }
